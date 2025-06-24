@@ -1,8 +1,16 @@
+# Ignore virtual environments
+my_venv/
+venv/
 env/
-samples/
 
+# Ignore Python cache and compiled files
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 
-my_venv/
+# Ignore local samples or test folders
+samples/
+
+# Ignore dependency list
+requirements.txt
