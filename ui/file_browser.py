@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 import os
 import mimetypes
 from datetime import datetime
+import subprocess
 from ui.metadata_viewer import MetadataViewer
 from services.image_metadata import read_image_metadata
 from services.video_metadata import read_video_metadata
@@ -45,8 +46,18 @@ class FileBrowser(QWidget):
         self.folder_label = QLabel("No folder selected")
         self.folder_label.setStyleSheet("font-weight: bold; font-size: 16px; padding-left: 15px;")
 
+        self.delete_button = QPushButton("🗑 Delete Metadata")
+        self.delete_button.setFixedHeight(40)
+        self.delete_button.clicked.connect(self.delete_selected_metadata)
+
+        self.refresh_button = QPushButton("🔄 Refresh")
+        self.refresh_button.setFixedHeight(40)
+        self.refresh_button.clicked.connect(self.refresh_folder)
+
         header_layout.addWidget(self.import_button)
         header_layout.addWidget(self.export_button)
+        header_layout.addWidget(self.delete_button)
+        header_layout.addWidget(self.refresh_button)
         header_layout.addWidget(self.folder_label)
         header_layout.addStretch()
 
@@ -60,8 +71,8 @@ class FileBrowser(QWidget):
         layout.addLayout(header_layout)
         layout.addWidget(self.table)
 
-    def import_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+    def import_folder(self, folder_path=None):
+        folder = folder_path or QFileDialog.getExistingDirectory(self, "Select Folder")
         if not folder:
             return
 
@@ -101,10 +112,18 @@ class FileBrowser(QWidget):
             self.table.setCellWidget(row, 4, btn)
 
     def handle_view_edit_click(self):
+        from ui.metadata_viewer import MetadataViewer  # Avoid circular import
         button = self.sender()
         file_path = button.property("file_path")
         viewer = MetadataViewer(file_path, self)
         viewer.exec()
+
+    def refresh_folder(self):
+        current_folder_text = self.folder_label.text()
+        if current_folder_text.startswith("Imported: "):
+            folder = current_folder_text.replace("Imported: ", "")
+            if os.path.isdir(folder):
+                self.import_folder(folder)
 
     def export_selected_metadata(self):
         exported = 0
@@ -134,6 +153,26 @@ class FileBrowser(QWidget):
             QMessageBox.information(self, "Export Complete", f"Exported metadata for {exported} file(s).")
         else:
             QMessageBox.warning(self, "No Files", "No files were selected for export.")
+
+    def delete_selected_metadata(self):
+        deleted = 0
+        for row in range(self.table.rowCount()):
+            checkbox = self.table.cellWidget(row, 0)
+            if not isinstance(checkbox, QCheckBox) or not checkbox.isChecked():
+                continue
+
+            file_path = checkbox.property("file_path")
+            try:
+                subprocess.run(["exiftool", "-overwrite_original", "-all=", file_path],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                deleted += 1
+            except subprocess.CalledProcessError as e:
+                print(f"❌ Failed to delete metadata for {file_path}: {e.stderr.decode()}")
+
+        if deleted:
+            QMessageBox.information(self, "Deleted", f"Deleted metadata for {deleted} file(s).")
+        else:
+            QMessageBox.warning(self, "No Files", "No files were selected for metadata deletion.")
 
     def _non_editable_item(self, value):
         item = QTableWidgetItem(str(value))
