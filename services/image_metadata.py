@@ -2,15 +2,19 @@
 import subprocess
 import json
 import os
+import shutil
 from PIL import Image, ExifTags
+
+# Auto-detect exiftool path or fallback to known location
+EXIFTOOL_PATH = shutil.which("exiftool") or "C:/ExifTool/exiftool.exe"
 
 def read_image_metadata(file_path):
     metadata = {}
 
     try:
-        # Try exiftool first
+        # Try exiftool first using full/auto path
         result = subprocess.run(
-            ["exiftool", "-json", file_path],
+            [EXIFTOOL_PATH, "-json", file_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=True

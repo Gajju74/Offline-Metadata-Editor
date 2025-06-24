@@ -9,13 +9,15 @@ from datetime import datetime
 from ui.metadata_viewer import MetadataViewer
 from services.image_metadata import read_image_metadata
 from services.video_metadata import read_video_metadata
+from PySide6.QtWidgets import QPushButton, QHBoxLayout
 
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".heic", ".mp4", ".mov", ".avi", ".mkv")
 
 class FileBrowser(QWidget):
-    def __init__(self):
+    def __init__(self, go_back_callback=None):
         super().__init__()
-        self.setMinimumSize(1600, 900)
+        self.go_back_callback = go_back_callback
+        self.setMinimumSize(1300, 900)
         self.setWindowTitle("📁 Folder Import – Offline Metadata Editor")
 
         layout = QVBoxLayout()
@@ -23,8 +25,15 @@ class FileBrowser(QWidget):
         layout.setSpacing(15)
         self.setLayout(layout)
 
-        # Top Section
+        # Top Header with Back Button
         header_layout = QHBoxLayout()
+
+        if self.go_back_callback:
+            back_button = QPushButton("← Back")
+            back_button.setFixedSize(80, 35)
+            back_button.clicked.connect(self.go_back_callback)
+            header_layout.addWidget(back_button)
+
         self.import_button = QPushButton("📁 Import Folder")
         self.import_button.setFixedHeight(40)
         self.import_button.clicked.connect(self.import_folder)
@@ -41,7 +50,7 @@ class FileBrowser(QWidget):
         header_layout.addWidget(self.folder_label)
         header_layout.addStretch()
 
-        # Table setup
+        # Table
         self.table = QTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["File Name", "File Type", "Size (MB)", "Date Modified", "Action"])
