@@ -155,7 +155,7 @@ class FileBrowser(QWidget):
             file_path = checkbox.property("file_path")
             try:
                 subprocess.run(["exiftool", "-overwrite_original", "-all=", file_path],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 deleted += 1
             except subprocess.CalledProcessError as e:
                 print(f"❌ Failed to delete metadata for {file_path}: {e.stderr.decode()}")
