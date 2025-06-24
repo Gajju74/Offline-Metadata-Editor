@@ -1,21 +1,10 @@
-# main.py
-# import sys
-# from PySide6.QtWidgets import QApplication
-# from ui.file_browser import FileBrowser
 
-# if __name__ == "__main__":
-#     app = QApplication(sys.argv)
-#     window = FileBrowser()
-#     window.show()
-#     sys.exit(app.exec())
-
-from PySide6.QtWidgets import QApplication
 import sys
-
-from ui.noise_browser import NoiseCancellationBrowser
+from PySide6.QtWidgets import QApplication
+from app.ui.main_window import MainWindow
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = NoiseCancellationBrowser()
+    window = MainWindow()
     window.show()
     sys.exit(app.exec())
