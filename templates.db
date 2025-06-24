@@ -1,0 +1,51 @@
+import sqlite3
+
+DB_PATH = "templates.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL
+        );
+    """)
+    conn.commit()
+    conn.close()
+
+def save_template(name, metadata_dict):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    for key, value in metadata_dict.items():
+        cursor.execute(
+            "INSERT INTO templates (name, key, value) VALUES (?, ?, ?)",
+            (name, key, value)
+        )
+    conn.commit()
+    conn.close()
+
+def load_template(name):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT key, value FROM templates WHERE name = ?", (name,))
+    data = cursor.fetchall()
+    conn.close()
+    return dict(data)
+
+def get_all_template_names():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT name FROM templates")
+    names = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return names
+
+def delete_template(name):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM templates WHERE name = ?", (name,))
+    conn.commit()
+    conn.close()
