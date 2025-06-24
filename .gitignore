@@ -1,2 +1,8 @@
 env/
 samples/
+
+__pycache__/
+*.pyc
+*.pyo
+
+my_venv/
