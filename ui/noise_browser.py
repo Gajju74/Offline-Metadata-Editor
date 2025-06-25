@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QFileDialog,
-    QTableWidget, QTableWidgetItem, QLabel, QHeaderView, QHBoxLayout, QMessageBox, QCheckBox, QInputDialog, QProgressBar, QSlider
+    QTableWidget, QTableWidgetItem, QLabel, QHeaderView, QHBoxLayout,
+    QMessageBox, QCheckBox, QInputDialog, QProgressBar, QSlider
 )
 from PySide6.QtCore import Qt, QThread, Signal, QUrl, QTimer, QTime
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -10,6 +11,7 @@ from datetime import datetime
 from audoai.noise_removal import NoiseRemovalClient
 
 SUPPORTED_NOISE_FORMATS = (".wav", ".mp3", ".aac", ".flac", ".ogg", ".mp4", ".mov", ".avi", ".mkv", ".m4a")
+
 
 class NoiseWorker(QThread):
     progress = Signal(int)
@@ -34,11 +36,13 @@ class NoiseWorker(QThread):
             self.progress.emit(int(((i + 1) / total) * 100))
         self.finished.emit(processed)
 
+
 class NoiseCancellationBrowser(QWidget):
     current_folder = None
 
-    def __init__(self):
+    def __init__(self, go_back_callback=None):  # ✅ accept go_back_callback
         super().__init__()
+        self.go_back_callback = go_back_callback
         self.setMinimumSize(1600, 900)
         self.setWindowTitle("🧹 Noise Canceller – Select Files")
 
@@ -51,7 +55,15 @@ class NoiseCancellationBrowser(QWidget):
         layout.setSpacing(15)
         self.setLayout(layout)
 
+        # ✅ Combine all buttons into one top bar
         header_layout = QHBoxLayout()
+
+        if self.go_back_callback:
+            back_btn = QPushButton("← Back")
+            back_btn.setFixedSize(100, 40)
+            back_btn.clicked.connect(self.go_back_callback)
+            header_layout.addWidget(back_btn)
+
         self.import_button = QPushButton("📁 Import Folder")
         self.import_button.setFixedHeight(40)
         self.import_button.clicked.connect(self.import_folder)
@@ -84,12 +96,15 @@ class NoiseCancellationBrowser(QWidget):
         header_layout.addWidget(self.folder_label)
         header_layout.addStretch()
 
+        layout.addLayout(header_layout)
+
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(["File Name", "File Type", "Size (MB)", "Date Modified"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setAlternatingRowColors(True)
         self.table.itemSelectionChanged.connect(self.handle_selection_change)
+        layout.addWidget(self.table)
 
         self.media_player = QMediaPlayer(self)
         self.audio_output = QAudioOutput(self)
@@ -110,14 +125,11 @@ class NoiseCancellationBrowser(QWidget):
 
         self.time_label = QLabel("00:00 / 00:00")
         self.player_bar.addWidget(self.time_label)
+        layout.addLayout(self.player_bar)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(False)
-
-        layout.addLayout(header_layout)
-        layout.addWidget(self.table)
-        layout.addLayout(self.player_bar)
         layout.addWidget(self.progress_bar)
 
         self.timer = QTimer(self)
@@ -198,6 +210,12 @@ class NoiseCancellationBrowser(QWidget):
 
     def refresh_folder(self):
         if self.current_folder:
+            self.table.setRowCount(0)
+            self.selected_audio = None
+            self.play_button.setEnabled(False)
+            self.play_toggle.setEnabled(False)
+            self.slider.setEnabled(False)
+            self.time_label.setText("00:00 / 00:00")
             self.import_folder(self.current_folder)
 
     def handle_finished(self, count):

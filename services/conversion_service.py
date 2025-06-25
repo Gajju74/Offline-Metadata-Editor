@@ -33,26 +33,48 @@ def run_conversion(file_path, output_format, strip_metadata=False, custom_metada
     else:
         return {"error": f"Unsupported file format: {ext}"}
 
-def batch_convert_folder(folder_path, output_format):
+
+
+
+def batch_convert_folder(folder_path, output_format, output_dir=None):
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+
     results = []
+
+    if output_dir is None:
+        output_dir = os.path.join(folder_path, "converted_output")
+
+    os.makedirs(output_dir, exist_ok=True)
     output_ext = f".{output_format.lower()}"
+
+    logging.debug(f"Scanning folder: {folder_path}")
+    logging.debug(f"Saving output to: {output_dir}")
 
     for filename in os.listdir(folder_path):
         full_path = os.path.join(folder_path, filename)
+
+        if os.path.isdir(full_path):
+            logging.debug(f"[SKIP] {filename} is a directory.")
+            continue
+
         name, ext = os.path.splitext(filename)
+        ext = ext.lower()
 
-        # Skip non-supported files
-        if ext.lower() not in SUPPORTED_IMAGE_FORMATS + SUPPORTED_VIDEO_FORMATS:
+        logging.debug(f"Found file: {filename} (ext: {ext})")
+
+        if ext not in SUPPORTED_IMAGE_FORMATS + SUPPORTED_VIDEO_FORMATS:
+            logging.debug(f"[SKIP] {filename} is not a supported format.")
             continue
 
-        # ✅ Skip already-converted files
         if name.endswith("_converted"):
+            logging.debug(f"[SKIP] {filename} already converted.")
             continue
 
-        if ext.lower() in SUPPORTED_IMAGE_FORMATS:
-            result = convert_image(full_path, output_format)
+        if ext in SUPPORTED_IMAGE_FORMATS:
+            result = convert_image(full_path, output_format, output_dir=output_dir)
         else:
-            result = convert_video(full_path, output_format)
+            result = convert_video(full_path, output_format, output_dir=output_dir)
 
         if isinstance(result, str) and result.endswith(output_ext):
             results.append({"result": result})

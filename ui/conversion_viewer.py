@@ -48,6 +48,13 @@ class ConversionViewer(QWidget):
         self.convert_btn.clicked.connect(self.run_bulk_conversion)
         top_bar.addWidget(self.convert_btn)
 
+        # Refresh Button
+        self.refresh_button = QPushButton("🔄 Refresh")
+        self.refresh_button.setFixedSize(100, 40)
+        self.refresh_button.clicked.connect(self.refresh_folder)
+        top_bar.addWidget(self.refresh_button)
+
+
         # Download All Button
         self.download_all_btn = QPushButton("⬇️ Download All")
         self.download_all_btn.setFixedSize(140, 40)
@@ -67,6 +74,14 @@ class ConversionViewer(QWidget):
         self.folder_path = None
         self.converted_file_paths = []
 
+    def refresh_folder(self):
+        self.table.setRowCount(0)
+        self.converted_file_paths = []
+        self.folder_path = None
+        self.format_dropdown.setCurrentIndex(0)
+        QMessageBox.information(self, "Reset", "View has been cleared.")
+
+
     def import_folder(self):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
         if folder_path:
@@ -83,7 +98,8 @@ class ConversionViewer(QWidget):
             QMessageBox.warning(self, "No Format", "Please select an output format.")
             return
 
-        results = batch_convert_folder(self.folder_path, output_format)
+        output_dir = os.path.join(self.folder_path, "converted_output")
+        results = batch_convert_folder(self.folder_path, output_format, output_dir=output_dir)
 
         self.converted_file_paths = []
         self.table.setRowCount(0)
