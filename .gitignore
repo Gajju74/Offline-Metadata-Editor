@@ -2,6 +2,7 @@
 my_venv/
 venv/
 env/
+models/
 
 # Ignore local samples or test folders
 samples/

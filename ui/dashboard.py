@@ -3,6 +3,7 @@ from PySide6.QtCore import Qt
 from ui.file_browser import FileBrowser
 from ui.conversion_viewer import ConversionViewer
 from ui.noise_browser import NoiseCancellationBrowser  # ✅ import noise tool
+from ui.enhancement_browser import EnhancementBrowser
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -28,7 +29,7 @@ class MainWindow(QWidget):
         metadata_btn = self.create_button("Meta data Editer", self.open_metadata_editor)
         conversion_btn = self.create_button("Conversion Video", self.open_converter)
         audio_btn = self.create_button("Audio noise reduction", self.open_noise_browser)
-        enhancement_btn = self.create_button("Enhancement using AI")
+        enhancement_btn = self.create_button("Enhancement using AI", self.open_enhancement_browser)
 
         for btn in [metadata_btn, conversion_btn, audio_btn, enhancement_btn]:
             button_layout.addWidget(btn)
@@ -38,13 +39,15 @@ class MainWindow(QWidget):
         # --- Feature Views ---
         self.metadata_editor = FileBrowser(self.go_back_to_dashboard)
         self.converter_viewer = ConversionViewer(self.go_back_to_dashboard)
-        self.noise_browser = NoiseCancellationBrowser()  # ✅ new feature
+        self.noise_browser = NoiseCancellationBrowser(self.go_back_to_dashboard)
+        self.enhancement_browser = EnhancementBrowser(self.go_back_to_dashboard)  # ✅ new feature
 
         # Add views to stacked layout
         self.stacked_layout.addWidget(self.dashboard_widget)     # index 0
         self.stacked_layout.addWidget(self.metadata_editor)      # index 1
         self.stacked_layout.addWidget(self.converter_viewer)     # index 2
         self.stacked_layout.addWidget(self.noise_browser)        # index 3
+        self.stacked_layout.addWidget(self.enhancement_browser)
         self.setLayout(self.stacked_layout)
 
     def create_button(self, label, callback=None):
@@ -72,6 +75,9 @@ class MainWindow(QWidget):
 
     def open_noise_browser(self):
         self.stacked_layout.setCurrentIndex(3)
+    
+    def open_enhancement_browser(self):
+        self.stacked_layout.setCurrentIndex(4)
 
     def go_back_to_dashboard(self):
         self.stacked_layout.setCurrentIndex(0)
