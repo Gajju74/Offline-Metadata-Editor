@@ -1,2 +1,4 @@
 env/
 samples/
+__pycache__/
+*.pyc
