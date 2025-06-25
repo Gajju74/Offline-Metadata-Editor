@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QStackedLayout
 from PySide6.QtCore import Qt
 from ui.file_browser import FileBrowser
-from ui.conversion_viewer import ConversionViewer  # ✅ Corrected import
+from ui.conversion_viewer import ConversionViewer
+from ui.noise_browser import NoiseCancellationBrowser  # ✅ import noise tool
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -25,8 +26,8 @@ class MainWindow(QWidget):
         button_layout.setSpacing(20)
 
         metadata_btn = self.create_button("Meta data Editer", self.open_metadata_editor)
-        conversion_btn = self.create_button("Conversion  Video", self.open_converter)
-        audio_btn = self.create_button("Audio noise reduction")
+        conversion_btn = self.create_button("Conversion Video", self.open_converter)
+        audio_btn = self.create_button("Audio noise reduction", self.open_noise_browser)
         enhancement_btn = self.create_button("Enhancement using AI")
 
         for btn in [metadata_btn, conversion_btn, audio_btn, enhancement_btn]:
@@ -37,11 +38,13 @@ class MainWindow(QWidget):
         # --- Feature Views ---
         self.metadata_editor = FileBrowser(self.go_back_to_dashboard)
         self.converter_viewer = ConversionViewer(self.go_back_to_dashboard)
+        self.noise_browser = NoiseCancellationBrowser()  # ✅ new feature
 
         # Add views to stacked layout
         self.stacked_layout.addWidget(self.dashboard_widget)     # index 0
         self.stacked_layout.addWidget(self.metadata_editor)      # index 1
         self.stacked_layout.addWidget(self.converter_viewer)     # index 2
+        self.stacked_layout.addWidget(self.noise_browser)        # index 3
         self.setLayout(self.stacked_layout)
 
     def create_button(self, label, callback=None):
@@ -66,6 +69,9 @@ class MainWindow(QWidget):
 
     def open_converter(self):
         self.stacked_layout.setCurrentIndex(2)
+
+    def open_noise_browser(self):
+        self.stacked_layout.setCurrentIndex(3)
 
     def go_back_to_dashboard(self):
         self.stacked_layout.setCurrentIndex(0)
