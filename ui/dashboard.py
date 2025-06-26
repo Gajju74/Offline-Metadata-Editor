@@ -2,8 +2,9 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLa
 from PySide6.QtCore import Qt
 from ui.file_browser import FileBrowser
 from ui.conversion_viewer import ConversionViewer
-from ui.noise_browser import NoiseCancellationBrowser  # ✅ import noise tool
+from ui.noise_browser import NoiseCancellationBrowser
 from ui.enhancement_browser import EnhancementBrowser
+from ui.video_editor_browser import VideoEditorBrowser
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -30,8 +31,9 @@ class MainWindow(QWidget):
         conversion_btn = self.create_button("Conversion Video", self.open_converter)
         audio_btn = self.create_button("Audio noise reduction", self.open_noise_browser)
         enhancement_btn = self.create_button("Enhancement using AI", self.open_enhancement_browser)
+        video_btn = self.create_button("Video Editor", self.open_video_editor_browser)
 
-        for btn in [metadata_btn, conversion_btn, audio_btn, enhancement_btn]:
+        for btn in [metadata_btn, conversion_btn, audio_btn, enhancement_btn, video_btn]:
             button_layout.addWidget(btn)
 
         dash_layout.addLayout(button_layout)
@@ -40,7 +42,8 @@ class MainWindow(QWidget):
         self.metadata_editor = FileBrowser(self.go_back_to_dashboard)
         self.converter_viewer = ConversionViewer(self.go_back_to_dashboard)
         self.noise_browser = NoiseCancellationBrowser(self.go_back_to_dashboard)
-        self.enhancement_browser = EnhancementBrowser(self.go_back_to_dashboard)  # ✅ new feature
+        self.enhancement_browser = EnhancementBrowser(self.go_back_to_dashboard)
+        self.video_editor_browser = VideoEditorBrowser(self.go_back_to_dashboard)
 
         # Add views to stacked layout
         self.stacked_layout.addWidget(self.dashboard_widget)     # index 0
@@ -48,6 +51,7 @@ class MainWindow(QWidget):
         self.stacked_layout.addWidget(self.converter_viewer)     # index 2
         self.stacked_layout.addWidget(self.noise_browser)        # index 3
         self.stacked_layout.addWidget(self.enhancement_browser)
+        self.stacked_layout.addWidget(self.video_editor_browser)
         self.setLayout(self.stacked_layout)
 
     def create_button(self, label, callback=None):
@@ -78,6 +82,9 @@ class MainWindow(QWidget):
     
     def open_enhancement_browser(self):
         self.stacked_layout.setCurrentIndex(4)
+
+    def open_video_editor_browser(self):
+        self.stacked_layout.setCurrentIndex(5)
 
     def go_back_to_dashboard(self):
         self.stacked_layout.setCurrentIndex(0)
