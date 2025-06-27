@@ -11,6 +11,9 @@ import re
 from services.image_metadata import read_image_metadata
 from services.video_metadata import read_video_metadata
 
+class NoScrollDateTimeEdit(QDateTimeEdit):
+    def wheelEvent(self, event):
+        event.ignore()
 
 class MetadataViewer(QDialog):
     def __init__(self, file_path, parent=None):
@@ -70,7 +73,7 @@ class MetadataViewer(QDialog):
             label = QLabel(key)
 
             if "Date" in key and isinstance(value, str):
-                field = QDateTimeEdit()
+                field = NoScrollDateTimeEdit()
                 field.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
                 dt = QDateTime.fromString(value, "yyyy-MM-dd HH:mm:ss")
                 if not dt.isValid():

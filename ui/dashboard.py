@@ -12,7 +12,7 @@ from ui.video_editor_browser import VideoEditorBrowser
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("🧠 AI Metadata Toolkit")
+        self.setWindowTitle("Metadata and Video Editor")
         self.setMinimumSize(1300, 900)
 
         self.setStyleSheet("""
@@ -34,7 +34,7 @@ class MainWindow(QWidget):
         dash_layout.setAlignment(Qt.AlignCenter)
         self.dashboard_widget.setLayout(dash_layout)
 
-        heading = QLabel("🧠 AI Metadata Toolkit")
+        heading = QLabel("Metadata and Video Editor")
         heading.setAlignment(Qt.AlignCenter)
         heading.setStyleSheet("""
             font-size: 32px;
