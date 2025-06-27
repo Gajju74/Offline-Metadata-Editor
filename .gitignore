@@ -2,15 +2,16 @@
 my_venv/
 venv/
 env/
+models/
+
+# Ignore local samples or test folders
+samples/
 
 # Ignore Python cache and compiled files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Ignore local samples or test folders
-samples/
 
 # Ignore dependency list
 requirements.txt
