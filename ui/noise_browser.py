@@ -58,7 +58,7 @@ class NoiseCancellationBrowser(QWidget):
 
     def __init__(self, go_back_callback=None):
         super().__init__()
-        self.setMinimumSize(1600, 900)
+        self.setMinimumSize(1300, 900)
         self.setWindowTitle("🧹 Noise Canceller – Select Files")
 
         self.api_key = None
@@ -116,7 +116,7 @@ class NoiseCancellationBrowser(QWidget):
         self.table.setHorizontalHeaderLabels(["File Name", "File Type", "Size (MB)", "Date Modified"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setAlternatingRowColors(True)
-        self.table.itemSelectionChanged.connect(self.handle_selection_change)
+        layout.addWidget(self.table)
 
         self.media_player = QMediaPlayer(self)
         self.audio_output = QAudioOutput(self)

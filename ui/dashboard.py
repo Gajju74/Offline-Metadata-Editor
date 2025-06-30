@@ -3,8 +3,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QStackedLayout, QSpacerItem, QSizePolicy
 )
 from PySide6.QtCore import Qt
-from ui.file_browser import FileBrowser
-from ui.conversion_viewer import ConversionViewer
+from ui.metadata_browser import MetadataBrowser
+from ui.conversion_browser import ConversionBrowser
 from ui.noise_browser import NoiseCancellationBrowser
 from ui.enhancement_browser import EnhancementBrowser
 from ui.video_editor_browser import VideoEditorBrowser
@@ -67,8 +67,8 @@ class MainWindow(QWidget):
         dash_layout.addItem(QSpacerItem(0, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         # Feature Views
-        self.metadata_editor = FileBrowser(self.go_back_to_dashboard)
-        self.converter_viewer = ConversionViewer(self.go_back_to_dashboard)
+        self.metadata_editor = MetadataBrowser(self.go_back_to_dashboard)
+        self.converter_viewer = ConversionBrowser(self.go_back_to_dashboard)
         self.noise_browser = NoiseCancellationBrowser(self.go_back_to_dashboard)
         self.enhancement_browser = EnhancementBrowser(self.go_back_to_dashboard)
         self.video_editor_browser = VideoEditorBrowser(self.go_back_to_dashboard)

@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QDialog, QSlider, QStyle, QSizePolicy, QSpinBox, QCheckBox, QRubberBand, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QDialog, QSlider, QStyle, QSizePolicy, QSpinBox, QCheckBox, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem
 from PySide6.QtCore import Qt, QUrl, QTime, QRect, QPoint, QSize
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
@@ -19,6 +19,7 @@ class ScreenshotSelectionWidget(QGraphicsView):
         self.scene().addItem(self.pixmap_item)
         self.origin = QPoint()
         self.selection_rects = []
+        self.rect_items = []  # Store rectangle items for removal
         self.temp_rect = None
 
     def mousePressEvent(self, event: QMouseEvent):
@@ -38,9 +39,19 @@ class ScreenshotSelectionWidget(QGraphicsView):
         if event.button() == Qt.LeftButton and self.temp_rect:
             rect = self.temp_rect.rect().toRect()
             self.selection_rects.append(rect)
+            self.rect_items.append(self.temp_rect)  # Store the rectangle item
             print(f"Selected Region: x={rect.x()}, y={rect.y()}, w={rect.width()}, h={rect.height()}")
             self.temp_rect = None
         super().mouseReleaseEvent(event)
+    
+    def remove_last_rectangle(self):
+        """Remove the last drawn rectangle from the scene"""
+        if self.rect_items:
+            last_rect = self.rect_items.pop()
+            self.scene().removeItem(last_rect)
+            if self.selection_rects:
+                self.selection_rects.pop()
+            self.viewport().update()  # Refresh the view
 
 class VideoEditorBrowser(QWidget):
     def __init__(self, go_back_callback=None):
@@ -242,15 +253,84 @@ class VideoEditorBrowser(QWidget):
             cmd = f"ffmpeg -y -ss {position_ms/1000:.2f} -i \"{file_path}\" -frames:v 1 \"{tmp_path}\""
             subprocess.call(cmd, shell=True)
 
-            screenshot_dialog = QDialog(self)
+            screenshot_dialog = QDialog(dialog)
             screenshot_dialog.setWindowTitle("🖼 Frame Screenshot")
             screenshot_layout = QVBoxLayout(screenshot_dialog)
 
             pixmap = QPixmap(tmp_path)
+            if pixmap.isNull():
+                QMessageBox.warning(dialog, "Error", "Failed to capture screenshot")
+                os.unlink(tmp_path)
+                return
+
             view = ScreenshotSelectionWidget(pixmap)
             screenshot_layout.addWidget(view)
-            screenshot_dialog.resize(pixmap.width() + 20, pixmap.height() + 60)
+
+            # Create button layout for undo and finish
+            button_layout = QHBoxLayout()
+            
+            undo_button = QPushButton("↩ Undo Last")
+            undo_button.setFixedSize(120, 35)
+            undo_button.setStyleSheet("background-color: #666; color: white; font-weight: bold; border-radius: 6px;")
+            undo_button.clicked.connect(view.remove_last_rectangle)
+            button_layout.addWidget(undo_button)
+            
+            finish_blur_button = QPushButton("✅ Finish Blurring")
+            finish_blur_button.setFixedSize(140, 35)
+            finish_blur_button.setStyleSheet("background-color: #2E7D32; color: white; font-weight: bold; border-radius: 6px;")
+            button_layout.addWidget(finish_blur_button)
+            
+            screenshot_layout.addLayout(button_layout)
+
+            def perform_blur():
+                if not view.selection_rects:
+                    QMessageBox.warning(screenshot_dialog, "No Selection", 
+                                        "Please select at least one region to blur.")
+                    return
+
+                # Build filter_complex string for multiple regions
+                filter_chain = ""
+                base = "[0:v]"   # Start with the original video as base
+                
+                # Create all blurred regions first
+                for i, rect in enumerate(view.selection_rects):
+                    x, y, w, h = rect.x(), rect.y(), rect.width(), rect.height()
+                    filter_chain += f"[0:v]crop={w}:{h}:{x}:{y},boxblur=10[blur{i}];"
+                
+                # Then overlay them sequentially
+                current = base
+                for i, rect in enumerate(view.selection_rects):
+                    x, y, w, h = rect.x(), rect.y(), rect.width(), rect.height()
+                    filter_chain += f"{current}[blur{i}]overlay={x}:{y}[ovl{i}];"
+                    current = f"[ovl{i}]"
+                
+                # Final output
+                filter_chain = filter_chain.rstrip(';')
+                output_path = os.path.splitext(file_path)[0] + "_blurred.mp4"
+                
+                # Build FFmpeg command
+                cmd = (f'ffmpeg -y -i "{file_path}" '
+                       f'-filter_complex "{filter_chain}" '
+                       f'-map "{current}" -c:a copy "{output_path}"')
+                
+                try:
+                    subprocess.run(cmd, shell=True, check=True)
+                    QMessageBox.information(screenshot_dialog, "Success", 
+                                         f"Blurred video saved to:\n{output_path}")
+                    screenshot_dialog.accept()
+                except subprocess.CalledProcessError as e:
+                    QMessageBox.critical(screenshot_dialog, "Error", 
+                                       f"Failed to apply blur: {e}\nCommand: {cmd}")
+
+            finish_blur_button.clicked.connect(perform_blur)
+            screenshot_dialog.resize(pixmap.width() + 20, pixmap.height() + 150)
             screenshot_dialog.exec()
+            
+            # Clean up temporary screenshot
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
         blur_button.clicked.connect(show_screenshot)
         layout.addWidget(blur_button)
