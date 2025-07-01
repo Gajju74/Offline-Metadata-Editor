@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton,
-    QHBoxLayout, QStackedLayout, QSpacerItem, QSizePolicy, QGridLayout
+    QHBoxLayout, QStackedLayout, QSpacerItem, QSizePolicy, QGridLayout,
+    QDialog
 )
 from PySide6.QtCore import Qt
 from ui.metadata_browser import MetadataBrowser
@@ -9,6 +10,7 @@ from ui.noise_browser import NoiseCancellationBrowser
 from ui.enhancement_browser import EnhancementBrowser
 from ui.video_editor_browser import VideoEditorBrowser
 from ui.image_editor_browser import ImageEditorBrowser
+from ui.authentication import AuthenticationDialog
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -16,6 +18,19 @@ class MainWindow(QWidget):
         self.setWindowTitle("Metadata and Video Editor")
         self.setMinimumSize(1300, 900)
 
+        self.valid_credentials = {
+            "admin": "12345",
+            "user": "password"
+        }
+
+        # Authentication dialog
+        self.auth_dialog = AuthenticationDialog(self.valid_credentials)
+        if self.auth_dialog.exec() == QDialog.Accepted:
+            self.setup_ui()  # Proceed if authenticated
+        else:
+            self.close()
+
+    def setup_ui(self):
         self.setStyleSheet("""
             QWidget {
                 background-color: #1e1e1e;
@@ -49,10 +64,7 @@ class MainWindow(QWidget):
         subtitle.setStyleSheet("font-size: 18px; color: #aaa; margin-bottom: 30px;")
         dash_layout.addWidget(subtitle)
 
-        # button_layout = QHBoxLayout()
-        # button_layout.setSpacing(25)
-        # button_layout.setAlignment(Qt.AlignCenter)
-
+        # Grid layout for buttons
         grid_layout = QGridLayout()
         grid_layout.setSpacing(25)
         grid_layout.setAlignment(Qt.AlignCenter)
@@ -70,8 +82,6 @@ class MainWindow(QWidget):
             row = i // 5
             col = i % 5
             grid_layout.addWidget(self.create_button(label, func), row, col)
-
-        dash_layout.addLayout(grid_layout)
 
         dash_layout.addLayout(grid_layout)
         dash_layout.addItem(QSpacerItem(0, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
