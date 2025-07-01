@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton,
-    QHBoxLayout, QStackedLayout, QSpacerItem, QSizePolicy
+    QHBoxLayout, QStackedLayout, QSpacerItem, QSizePolicy, QGridLayout
 )
 from PySide6.QtCore import Qt
 from ui.metadata_browser import MetadataBrowser
@@ -8,6 +8,7 @@ from ui.conversion_browser import ConversionBrowser
 from ui.noise_browser import NoiseCancellationBrowser
 from ui.enhancement_browser import EnhancementBrowser
 from ui.video_editor_browser import VideoEditorBrowser
+from ui.image_editor_browser import ImageEditorBrowser
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -48,9 +49,13 @@ class MainWindow(QWidget):
         subtitle.setStyleSheet("font-size: 18px; color: #aaa; margin-bottom: 30px;")
         dash_layout.addWidget(subtitle)
 
-        button_layout = QHBoxLayout()
-        button_layout.setSpacing(25)
-        button_layout.setAlignment(Qt.AlignCenter)
+        # button_layout = QHBoxLayout()
+        # button_layout.setSpacing(25)
+        # button_layout.setAlignment(Qt.AlignCenter)
+
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(25)
+        grid_layout.setAlignment(Qt.AlignCenter)
 
         buttons = [
             ("📝 Meta Data Editor", self.open_metadata_editor),
@@ -58,12 +63,17 @@ class MainWindow(QWidget):
             ("🔊 Noise Reduction", self.open_noise_browser),
             ("✨ AI Enhancement", self.open_enhancement_browser),
             ("🎬 Video Editor", self.open_video_editor_browser),
+            ("🖼️ Image Editor", self.open_image_editor_browser),
         ]
 
-        for label, func in buttons:
-            button_layout.addWidget(self.create_button(label, func))
+        for i, (label, func) in enumerate(buttons):
+            row = i // 5
+            col = i % 5
+            grid_layout.addWidget(self.create_button(label, func), row, col)
 
-        dash_layout.addLayout(button_layout)
+        dash_layout.addLayout(grid_layout)
+
+        dash_layout.addLayout(grid_layout)
         dash_layout.addItem(QSpacerItem(0, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         # Feature Views
@@ -72,6 +82,7 @@ class MainWindow(QWidget):
         self.noise_browser = NoiseCancellationBrowser(self.go_back_to_dashboard)
         self.enhancement_browser = EnhancementBrowser(self.go_back_to_dashboard)
         self.video_editor_browser = VideoEditorBrowser(self.go_back_to_dashboard)
+        self.image_editor_browser = ImageEditorBrowser(self.go_back_to_dashboard)
 
         # Add to stacked layout
         self.stacked_layout.addWidget(self.dashboard_widget)
@@ -80,6 +91,7 @@ class MainWindow(QWidget):
         self.stacked_layout.addWidget(self.noise_browser)
         self.stacked_layout.addWidget(self.enhancement_browser)
         self.stacked_layout.addWidget(self.video_editor_browser)
+        self.stacked_layout.addWidget(self.image_editor_browser)
 
         self.setLayout(self.stacked_layout)
 
@@ -119,6 +131,9 @@ class MainWindow(QWidget):
 
     def open_video_editor_browser(self):
         self.stacked_layout.setCurrentIndex(5)
+
+    def open_image_editor_browser(self):
+        self.stacked_layout.setCurrentIndex(6)
 
     def go_back_to_dashboard(self):
         self.stacked_layout.setCurrentIndex(0)
