@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QDialog, QSlider, QStyle, QSizePolicy, QSpinBox, QCheckBox, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem
-from PySide6.QtCore import Qt, QUrl, QTime, QRect, QPoint, QSize
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QDialog, QSlider, QStyle, QSizePolicy, QSpinBox, QCheckBox, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem, QProgressDialog
+from PySide6.QtCore import Qt, QUrl, QTime, QRect, QPoint, QSize, QThread, Signal
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtGui import QPixmap, QMouseEvent, QPen, QColor
@@ -8,6 +8,7 @@ import mimetypes
 from datetime import datetime
 import tempfile
 import subprocess
+import re # Added for parsing FFmpeg output
 
 SUPPORTED_VIDEO_FORMATS = (".mp4", ".mov", ".avi", ".mkv")
 
@@ -53,6 +54,61 @@ class ScreenshotSelectionWidget(QGraphicsView):
                 self.selection_rects.pop()
             self.viewport().update()  # Refresh the view
 
+class BlurWorker(QThread):
+    progress_updated = Signal(int) # Emits percentage (0-100)
+    blur_done = Signal(bool, str) # Emits (success: bool, message: str)
+
+    def __init__(self, file_path, filter_chain, output_path, total_duration_ms):
+        super().__init__()
+        self.file_path = file_path
+        self.filter_chain = filter_chain
+        self.output_path = output_path
+        self.total_duration_ms = total_duration_ms
+        self.is_cancelled = False
+
+    def run(self):
+        cmd = (f'ffmpeg -y -i "{self.file_path}" '
+               f'-filter_complex "{self.filter_chain}" '
+               f'-map "[out_v]" -c:a copy "{self.output_path}"')
+
+        process = None
+        try:
+            process = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE, universal_newlines=True)
+
+            total_seconds = self.total_duration_ms / 1000
+            for line in process.stderr:
+                if self.is_cancelled:
+                    process.terminate()
+                    self.blur_done.emit(False, "Blurring cancelled.")
+                    return
+
+                if "time=" in line and "total_time=" not in line:
+                    match = re.search(r"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})", line)
+                    if match:
+                        h, m, s, ms_hundredths = map(int, match.groups())
+                        current_seconds = h * 3600 + m * 60 + s + ms_hundredths / 100
+                        
+                        if total_seconds > 0:
+                            progress_percent = int((current_seconds / total_seconds) * 100)
+                            progress_percent = max(0, min(100, progress_percent)) # Clamp to 0-100
+                            self.progress_updated.emit(progress_percent)
+
+            process.wait()
+            
+            if process.returncode == 0:
+                self.blur_done.emit(True, f"Blurred video saved to:\n{self.output_path}")
+            else:
+                self.blur_done.emit(False, f"FFmpeg process failed with error code {process.returncode}. Check console for details.")
+
+        except Exception as e:
+            if process:
+                process.terminate()
+            self.blur_done.emit(False, f"An unexpected error occurred during blur: {e}")
+
+    def cancel(self):
+        """Allows cancelling the FFmpeg process."""
+        self.is_cancelled = True
+
 class VideoEditorBrowser(QWidget):
     def __init__(self, go_back_callback=None):
         super().__init__()
@@ -60,6 +116,7 @@ class VideoEditorBrowser(QWidget):
         self.setMinimumSize(1300, 900)
         self.go_back_callback = go_back_callback
         self.current_folder = None
+        self.blur_worker = None # Keep a reference to the worker
 
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -188,7 +245,7 @@ class VideoEditorBrowser(QWidget):
 
         volume_slider = QSlider(Qt.Horizontal)
         volume_slider.setRange(0, 100)
-        volume_slider.setValue(audio_output.volume() * 100)
+        volume_slider.setValue(int(audio_output.volume() * 100)) # Ensure integer value
         volume_slider.setFixedWidth(100)
         volume_slider.valueChanged.connect(lambda val: audio_output.setVolume(val / 100))
         control_layout.addWidget(volume_slider)
@@ -226,12 +283,14 @@ class VideoEditorBrowser(QWidget):
             total_time_label.setText(QTime(0, 0, 0).addMSecs(duration).toString("mm:ss"))
             start_spin.setMaximum(duration // 1000)
             end_spin.setMaximum(duration // 1000)
-            end_spin.setValue(duration // 1000)
+            end_spin.setValue(duration // 1000) # Set end time to max duration by default
 
         def update_position(position):
-            slider.blockSignals(True)
-            slider.setValue(position)
-            slider.blockSignals(False)
+            # Only update slider if not currently dragging it
+            if not slider.isSliderDown():
+                slider.blockSignals(True)
+                slider.setValue(position)
+                slider.blockSignals(False)
             time_label.setText(QTime(0, 0, 0).addMSecs(position).toString("mm:ss"))
 
         def seek(position):
@@ -248,10 +307,19 @@ class VideoEditorBrowser(QWidget):
 
         def show_screenshot():
             position_ms = player.position()
+            video_duration_ms = player.duration() # Get total video duration for progress calculation
+
+            # Capture a temporary screenshot
             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
                 tmp_path = tmp.name
+            # Ensure the screenshot command uses correct time format for ffmpeg and correct input path quoting
             cmd = f"ffmpeg -y -ss {position_ms/1000:.2f} -i \"{file_path}\" -frames:v 1 \"{tmp_path}\""
-            subprocess.call(cmd, shell=True)
+            # Use subprocess.run for simple blocking calls like this, check=True for error
+            try:
+                subprocess.run(cmd, shell=True, check=True, capture_output=True)
+            except subprocess.CalledProcessError as e:
+                QMessageBox.warning(dialog, "Error", f"Failed to capture screenshot: {e.stderr.decode()}")
+                return
 
             screenshot_dialog = QDialog(dialog)
             screenshot_dialog.setWindowTitle("🖼 Frame Screenshot")
@@ -259,7 +327,7 @@ class VideoEditorBrowser(QWidget):
 
             pixmap = QPixmap(tmp_path)
             if pixmap.isNull():
-                QMessageBox.warning(dialog, "Error", "Failed to capture screenshot")
+                QMessageBox.warning(dialog, "Error", "Failed to load captured screenshot")
                 os.unlink(tmp_path)
                 return
 
@@ -304,23 +372,48 @@ class VideoEditorBrowser(QWidget):
                     filter_chain += f"{current}[blur{i}]overlay={x}:{y}[ovl{i}];"
                     current = f"[ovl{i}]"
                 
-                # Final output
-                filter_chain = filter_chain.rstrip(';')
+                # Add a final split to name the output stream for '-map'
+                filter_chain += f"{current}split[out_v];" 
+
                 output_path = os.path.splitext(file_path)[0] + "_blurred.mp4"
                 
-                # Build FFmpeg command
-                cmd = (f'ffmpeg -y -i "{file_path}" '
-                       f'-filter_complex "{filter_chain}" '
-                       f'-map "{current}" -c:a copy "{output_path}"')
+                # --- Progress Dialog and Worker Setup ---
+                blur_progress_dialog = QProgressDialog("Applying blur...", "Cancel", 0, 100, screenshot_dialog)
+                blur_progress_dialog.setWindowModality(Qt.WindowModal)
+                blur_progress_dialog.setMinimumDuration(0)
+                blur_progress_dialog.setMinimumWidth(400) # Set a readable width
+                blur_progress_dialog.setValue(0)
+                blur_progress_dialog.setWindowTitle("Blurring Progress")
+
+                # Pause player during blurring to avoid conflicts and save resources
+                player.pause()
+
+                # Instantiate the worker thread, using self.blur_worker to keep a strong reference
+                self.blur_worker = BlurWorker(file_path, filter_chain, output_path, video_duration_ms)
+
+                # Connect worker signals to dialog updates and completion handling
+                self.blur_worker.progress_updated.connect(blur_progress_dialog.setValue)
                 
-                try:
-                    subprocess.run(cmd, shell=True, check=True)
-                    QMessageBox.information(screenshot_dialog, "Success", 
-                                         f"Blurred video saved to:\n{output_path}")
-                    screenshot_dialog.accept()
-                except subprocess.CalledProcessError as e:
-                    QMessageBox.critical(screenshot_dialog, "Error", 
-                                       f"Failed to apply blur: {e}\nCommand: {cmd}")
+                # Use a lambda to pass additional arguments to on_blur_done
+                self.blur_worker.blur_done.connect(
+                    lambda success, msg: on_blur_done(success, msg, blur_progress_dialog, self.blur_worker)
+                )
+                
+                # Connect cancel button to worker's cancel method
+                blur_progress_dialog.canceled.connect(self.blur_worker.cancel) 
+
+                self.blur_worker.start() # Start the blurring process in the background
+
+            def on_blur_done(success, message, progress_dialog_instance, worker_instance):
+                """Handle the completion of the blur worker."""
+                progress_dialog_instance.close()
+                if success:
+                    QMessageBox.information(screenshot_dialog, "Success", message)
+                    screenshot_dialog.accept() # Close the screenshot dialog on successful blur
+                else:
+                    QMessageBox.critical(screenshot_dialog, "Error", f"Blur failed: {message}")
+                player.play() # Resume player after blur is done/failed
+                worker_instance.deleteLater() # Clean up the worker thread
 
             finish_blur_button.clicked.connect(perform_blur)
             screenshot_dialog.resize(pixmap.width() + 20, pixmap.height() + 150)

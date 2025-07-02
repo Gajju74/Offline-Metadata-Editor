@@ -134,6 +134,30 @@ class EnhancementBrowser(QWidget):
         if self.current_folder and os.path.isdir(self.current_folder):
             self.import_folder(self.current_folder)
 
+    # def run_enhancement(self):
+    #     results = []
+    #     for row in range(self.table.rowCount()):
+    #         combo: QComboBox = self.table.cellWidget(row, 4)
+    #         file_path = combo.property("file_path")
+    #         choice = combo.currentText()
+
+    #         if choice != "None":
+    #             results.append((file_path, choice))
+
+    #     if not results:
+    #         QMessageBox.information(self, "No Enhancement", "No files were selected for enhancement.")
+    #         return
+
+    #     self.progress_dialog = QProgressDialog("Enhancing images...", "Cancel", 0, len(results), self)
+    #     self.progress_dialog.setWindowModality(Qt.WindowModal)
+    #     self.progress_dialog.setMinimumDuration(0)
+    #     self.progress_dialog.setValue(0)
+
+    #     self.worker = EnhancementWorker(results)
+    #     self.worker.progress_updated.connect(self.progress_dialog.setValue)
+    #     self.worker.enhancement_done.connect(self.on_enhancement_done)
+    #     self.worker.start()
+
     def run_enhancement(self):
         results = []
         for row in range(self.table.rowCount()):
@@ -153,6 +177,7 @@ class EnhancementBrowser(QWidget):
         self.progress_dialog.setMinimumDuration(0)
         self.progress_dialog.setValue(0)
 
+        self.progress_dialog.setMinimumWidth(400)
         self.worker = EnhancementWorker(results)
         self.worker.progress_updated.connect(self.progress_dialog.setValue)
         self.worker.enhancement_done.connect(self.on_enhancement_done)
