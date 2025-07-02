@@ -20,7 +20,7 @@ class ScreenshotSelectionWidget(QGraphicsView):
         self.scene().addItem(self.pixmap_item)
         self.origin = QPoint()
         self.selection_rects = []
-        self.rect_items = []  # Store rectangle items for removal
+        self.rect_items = []
         self.temp_rect = None
 
     def mousePressEvent(self, event: QMouseEvent):
@@ -68,8 +68,8 @@ class BlurWorker(QThread):
 
     def run(self):
         cmd = (f'ffmpeg -y -i "{self.file_path}" '
-               f'-filter_complex "{self.filter_chain}" '
-               f'-map "[out_v]" -c:a copy "{self.output_path}"')
+                f'-filter_complex "{self.filter_chain}" '
+                f'-map "[out_v]" -c:a copy "{self.output_path}"')
 
         process = None
         try:

@@ -32,6 +32,17 @@ class MetadataViewer(QDialog):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        # Main Heading
+        heading = QLabel("📝 Metadata Editor")
+        heading.setAlignment(Qt.AlignCenter)
+        heading.setStyleSheet("""
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #E0E0E0;
+        """)
+        layout.addWidget(heading)
+
         # Top Bar
         top_bar = QHBoxLayout()
         top_bar.addWidget(QLabel(f"File: {file_path}"))
@@ -111,7 +122,7 @@ class MetadataViewer(QDialog):
                 for k, v in metadata.items():
                     f.write(f"{k}: {v}\n")
             subprocess.run(["exiftool", "-overwrite_original", f"-tagsFromFile={self.file_path}", target_file],
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
             QMessageBox.information(self, "Copied", f"Metadata copied to:\n{target_file}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed: {e}")
@@ -265,7 +276,7 @@ class MetadataBrowser(QWidget):
             path = checkbox.property("file_path")
             try:
                 subprocess.run(["exiftool", "-overwrite_original", "-all=", path],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                 deleted += 1
             except subprocess.CalledProcessError as e:
                 print(f"❌ Failed to delete metadata for {path}: {e.stderr.decode()}")
