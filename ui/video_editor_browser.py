@@ -112,7 +112,7 @@ class BlurWorker(QThread):
 class VideoEditorBrowser(QWidget):
     def __init__(self, go_back_callback=None):
         super().__init__()
-        self.setWindowTitle("🎬 Video Editor Tool")
+        self.setWindowTitle("Video Editor Tool")
         self.setMinimumSize(1300, 900)
         self.go_back_callback = go_back_callback
         self.current_folder = None
@@ -205,7 +205,7 @@ class VideoEditorBrowser(QWidget):
 
     def open_video_player(self, file_path):
         dialog = QDialog(self)
-        dialog.setWindowTitle("🎞 Video Preview & Trim")
+        dialog.setWindowTitle("Video Preview & Trim")
         dialog.setMinimumSize(960, 600)
         layout = QVBoxLayout(dialog)
 
@@ -300,7 +300,7 @@ class VideoEditorBrowser(QWidget):
         player.positionChanged.connect(update_position)
         slider.sliderMoved.connect(seek)
 
-        blur_button = QPushButton("📦 Blur Region")
+        blur_button = QPushButton("Blur Region")
         blur_button.setFixedSize(140, 35)
         blur_button.setStyleSheet("background-color: #444; color: white; font-weight: bold; border-radius: 6px;")
         layout.addWidget(blur_button)
@@ -322,7 +322,7 @@ class VideoEditorBrowser(QWidget):
                 return
 
             screenshot_dialog = QDialog(dialog)
-            screenshot_dialog.setWindowTitle("🖼 Frame Screenshot")
+            screenshot_dialog.setWindowTitle("Frame Screenshot")
             screenshot_layout = QVBoxLayout(screenshot_dialog)
 
             pixmap = QPixmap(tmp_path)

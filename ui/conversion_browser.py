@@ -81,7 +81,7 @@ class ConversionBrowser(QWidget):
         super().__init__()
         self.go_back_callback = go_back_callback
         self.setMinimumSize(1300, 900)
-        self.setWindowTitle("🌀 Bulk File Format Converter")
+        self.setWindowTitle("Bulk File Format Converter")
 
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)

@@ -16,7 +16,7 @@ SUPPORTED_IMAGE_FORMATS = (".jpg", ".jpeg", ".png", ".heic", ".bmp")
 class ImageEditorBrowser(QWidget):
     def __init__(self, go_back_callback=None):
         super().__init__()
-        self.setWindowTitle("🖼️ Image Editor")
+        self.setWindowTitle("Image Editor")
         self.setMinimumSize(1300, 900)
         self.go_back_callback = go_back_callback
         self.current_folder = None
@@ -114,7 +114,7 @@ class ImageEditorBrowser(QWidget):
         file_path = sender.property("file_path")
 
         dialog = QDialog(self)
-        dialog.setWindowTitle("🖼️ Image Viewer")
+        dialog.setWindowTitle("Image Viewer")
         dialog.setMinimumSize(1000, 700)
 
         layout = QVBoxLayout(dialog)

@@ -11,6 +11,7 @@ from ui.enhancement_browser import EnhancementBrowser
 from ui.video_editor_browser import VideoEditorBrowser
 from ui.image_editor_browser import ImageEditorBrowser
 from ui.authentication import AuthenticationDialog
+from ui.batch_renamer_browser import BatchRenamerBrowser
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -70,12 +71,13 @@ class MainWindow(QWidget):
         grid_layout.setAlignment(Qt.AlignCenter)
 
         buttons = [
-            ("📝 Meta Data Editor", self.open_metadata_editor),
-            ("🎞️ Video Converter", self.open_converter),
-            ("🔊 Noise Reduction", self.open_noise_browser),
-            ("✨ AI Enhancement", self.open_enhancement_browser),
-            ("🎬 Video Editor", self.open_video_editor_browser),
-            ("🖼️ Image Editor", self.open_image_editor_browser),
+            ("Meta Data Editor", self.open_metadata_editor),
+            ("Video Converter", self.open_converter),
+            ("Noise Reduction", self.open_noise_browser),
+            ("AI Enhancement", self.open_enhancement_browser),
+            ("Video Editor", self.open_video_editor_browser),
+            ("Image Editor", self.open_image_editor_browser),
+            ("Batch Renamer", self.open_batch_renamer_browser),
         ]
 
         for i, (label, func) in enumerate(buttons):
@@ -93,6 +95,7 @@ class MainWindow(QWidget):
         self.enhancement_browser = EnhancementBrowser(self.go_back_to_dashboard)
         self.video_editor_browser = VideoEditorBrowser(self.go_back_to_dashboard)
         self.image_editor_browser = ImageEditorBrowser(self.go_back_to_dashboard)
+        self.batch_renamer_browser = BatchRenamerBrowser(self.go_back_to_dashboard)
 
         # Add to stacked layout
         self.stacked_layout.addWidget(self.dashboard_widget)
@@ -102,6 +105,7 @@ class MainWindow(QWidget):
         self.stacked_layout.addWidget(self.enhancement_browser)
         self.stacked_layout.addWidget(self.video_editor_browser)
         self.stacked_layout.addWidget(self.image_editor_browser)
+        self.stacked_layout.addWidget(self.batch_renamer_browser)
 
         self.setLayout(self.stacked_layout)
 
@@ -145,5 +149,9 @@ class MainWindow(QWidget):
     def open_image_editor_browser(self):
         self.stacked_layout.setCurrentIndex(6)
 
+    def open_batch_renamer_browser(self):
+        self.stacked_layout.setCurrentIndex(7)
+
     def go_back_to_dashboard(self):
         self.stacked_layout.setCurrentIndex(0)
+

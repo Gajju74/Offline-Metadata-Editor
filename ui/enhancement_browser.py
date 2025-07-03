@@ -41,7 +41,7 @@ class EnhancementWorker(QThread):
 class EnhancementBrowser(QWidget):
     def __init__(self, go_back_callback=None):
         super().__init__()
-        self.setWindowTitle("🧠 AI Enhancement Tool")
+        self.setWindowTitle("Enhancement Tool")
         self.setMinimumSize(1300, 900)
         self.go_back_callback = go_back_callback
         self.current_folder = None
@@ -63,7 +63,7 @@ class EnhancementBrowser(QWidget):
         self.import_button.setFixedHeight(40)
         self.import_button.clicked.connect(lambda: self.import_folder())
 
-        self.start_button = QPushButton("🚀 Start Enhancement")
+        self.start_button = QPushButton("Start Enhancement")
         self.start_button.setFixedHeight(40)
         self.start_button.clicked.connect(self.run_enhancement)
 

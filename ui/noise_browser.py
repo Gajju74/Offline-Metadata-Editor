@@ -59,7 +59,7 @@ class NoiseCancellationBrowser(QWidget):
     def __init__(self, go_back_callback=None):
         super().__init__()
         self.setMinimumSize(1300, 900)
-        self.setWindowTitle("🧹 Noise Canceller – Select Files")
+        self.setWindowTitle("Noise Canceller – Select Files")
 
         self.api_key = None
         self.noise_removal_client = None
@@ -96,7 +96,7 @@ class NoiseCancellationBrowser(QWidget):
         self.play_button.setEnabled(False)
         self.play_button.clicked.connect(self.play_audio)
 
-        self.noise_button = QPushButton("🔊 Start Noise Cancellation")
+        self.noise_button = QPushButton("Start Noise Cancellation")
         self.noise_button.setFixedHeight(40)
         self.noise_button.clicked.connect(self.process_selected_files)
 

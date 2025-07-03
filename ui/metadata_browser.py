@@ -28,20 +28,21 @@ class MetadataViewer(QDialog):
         self.file_path = file_path
         self.metadata = self.load_metadata()
         self.field_widgets = {}
-
+        
         layout = QVBoxLayout()
         self.setLayout(layout)
 
-        # Main Heading
-        heading = QLabel("📝 Metadata Editor")
+        heading = QLabel("Metadata Editor")
         heading.setAlignment(Qt.AlignCenter)
         heading.setStyleSheet("""
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
-            margin-bottom: 20px;
-            color: #E0E0E0;
+            margin-bottom: 25px;
+            color: #66afe9;
+            padding-top: 10px;
         """)
         layout.addWidget(heading)
+
 
         # Top Bar
         top_bar = QHBoxLayout()
@@ -160,6 +161,19 @@ class MetadataBrowser(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         self.setLayout(layout)
+
+        # --- Main Heading for MetadataBrowser ---
+        main_heading = QLabel("Metadata Editor")
+        main_heading.setAlignment(Qt.AlignCenter)
+        main_heading.setStyleSheet("""
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #66afe9;
+            padding-top: 10px;
+        """)
+        layout.addWidget(main_heading)
+        # --- End Main Heading ---
 
         header_layout = QHBoxLayout()
         if self.go_back_callback:
