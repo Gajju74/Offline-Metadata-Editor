@@ -77,6 +77,17 @@ class NoiseCancellationBrowser(QWidget):
         # ✅ Combine all buttons into one top bar
         header_layout = QHBoxLayout()
 
+        heading = QLabel("Noise Browser")
+        heading.setAlignment(Qt.AlignCenter)
+        heading.setStyleSheet("""
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #66afe9;
+            padding-top: 10px;
+        """)
+        layout.addWidget(heading)
+
         if self.go_back_callback:
             self.back_button = QPushButton("← Back")
             self.back_button.setFixedSize(80, 35)

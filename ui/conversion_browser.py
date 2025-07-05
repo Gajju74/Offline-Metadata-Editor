@@ -88,6 +88,18 @@ class ConversionBrowser(QWidget):
         layout.setSpacing(15)
         self.setLayout(layout)
 
+        heading = QLabel("Video Converter")
+        heading.setAlignment(Qt.AlignCenter)
+        heading.setStyleSheet("""
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #66afe9;
+            padding-top: 10px;
+        """)
+        layout.addWidget(heading)
+
+
 
         # --- Top Bar ---
         top_bar = QHBoxLayout()
@@ -114,17 +126,6 @@ class ConversionBrowser(QWidget):
         self.convert_btn.clicked.connect(self.run_bulk_conversion)
         top_bar.addWidget(self.convert_btn)
 
-<<<<<<< HEAD:ui/conversion_viewer.py
-        # Refresh Button
-        self.refresh_button = QPushButton("🔄 Refresh")
-        self.refresh_button.setFixedSize(100, 40)
-        self.refresh_button.clicked.connect(self.refresh_folder)
-        top_bar.addWidget(self.refresh_button)
-
-
-        # Download All Button
-=======
->>>>>>> ashwin:ui/conversion_browser.py
         self.download_all_btn = QPushButton("⬇️ Download All")
         self.download_all_btn.setFixedSize(140, 40)
         self.download_all_btn.clicked.connect(self.download_all_files)

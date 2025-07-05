@@ -29,6 +29,17 @@ class ImageEditorBrowser(QWidget):
         # Header Layout
         header_layout = QHBoxLayout()
 
+        heading = QLabel("Image Editor")
+        heading.setAlignment(Qt.AlignCenter)
+        heading.setStyleSheet("""
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #66afe9;
+            padding-top: 10px;
+        """)
+        layout.addWidget(heading)
+
         if self.go_back_callback:
             back_button = QPushButton("← Back")
             back_button.setFixedSize(80, 35)
