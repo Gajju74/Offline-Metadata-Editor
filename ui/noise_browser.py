@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, QThread, Signal, QUrl, QTimer, QTime
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 import os
 import mimetypes
+import subprocess
 from datetime import datetime
 from audoai.noise_removal import NoiseRemovalClient
 
@@ -27,9 +28,27 @@ class NoiseWorker(QThread):
         processed = 0
         for i, file_path in enumerate(self.files):
             try:
-                result = self.client.process(file_path)
-                output_path = os.path.splitext(file_path)[0] + "_cleaned" + os.path.splitext(file_path)[1]
-                result.save(output_path)
+                ext = os.path.splitext(file_path)[1].lower()
+                is_video = ext in (".mp4", ".mov", ".avi", ".mkv")
+                if is_video:
+                    temp_audio = file_path + ".temp_audio.wav"
+                    cleaned_audio = file_path + ".cleaned_audio.wav"
+                    final_video = os.path.splitext(file_path)[0] + "_cleaned" + ext
+
+                    subprocess.run(["ffmpeg", "-i", file_path, "-vn", "-acodec", "pcm_s16le", temp_audio], check=True)
+                    result = self.client.process(temp_audio)
+                    result.save(cleaned_audio)
+                    subprocess.run([
+                        "ffmpeg", "-i", file_path, "-i", cleaned_audio,
+                        "-c:v", "copy", "-map", "0:v:0", "-map", "1:a:0", "-shortest", final_video
+                    ], check=True)
+
+                    os.remove(temp_audio)
+                    os.remove(cleaned_audio)
+                else:
+                    result = self.client.process(file_path)
+                    output_path = os.path.splitext(file_path)[0] + "_cleaned" + ext
+                    result.save(output_path)
                 processed += 1
             except Exception as e:
                 print(f"❌ Failed to clean {file_path}: {e}")
@@ -40,15 +59,15 @@ class NoiseWorker(QThread):
 class NoiseCancellationBrowser(QWidget):
     current_folder = None
 
-    def __init__(self, go_back_callback=None):  # ✅ accept go_back_callback
+    def __init__(self, go_back_callback=None):
         super().__init__()
-        self.go_back_callback = go_back_callback
-        self.setMinimumSize(1600, 900)
-        self.setWindowTitle("🧹 Noise Canceller – Select Files")
+        self.setMinimumSize(1300, 900)
+        self.setWindowTitle("Noise Canceller – Select Files")
 
         self.api_key = None
         self.noise_removal_client = None
         self.selected_audio = None
+        self.go_back_callback = go_back_callback
 
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
@@ -59,10 +78,10 @@ class NoiseCancellationBrowser(QWidget):
         header_layout = QHBoxLayout()
 
         if self.go_back_callback:
-            back_btn = QPushButton("← Back")
-            back_btn.setFixedSize(100, 40)
-            back_btn.clicked.connect(self.go_back_callback)
-            header_layout.addWidget(back_btn)
+            self.back_button = QPushButton("← Back")
+            self.back_button.setFixedSize(80, 35)
+            self.back_button.clicked.connect(self.go_back_callback)
+            header_layout.addWidget(self.back_button)
 
         self.import_button = QPushButton("📁 Import Folder")
         self.import_button.setFixedHeight(40)
@@ -81,7 +100,7 @@ class NoiseCancellationBrowser(QWidget):
         self.play_button.setEnabled(False)
         self.play_button.clicked.connect(self.play_audio)
 
-        self.noise_button = QPushButton("🔊 Start Noise Cancellation")
+        self.noise_button = QPushButton("Start Noise Cancellation")
         self.noise_button.setFixedHeight(40)
         self.noise_button.clicked.connect(self.process_selected_files)
 
@@ -103,7 +122,6 @@ class NoiseCancellationBrowser(QWidget):
         self.table.setHorizontalHeaderLabels(["File Name", "File Type", "Size (MB)", "Date Modified"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setAlternatingRowColors(True)
-        self.table.itemSelectionChanged.connect(self.handle_selection_change)
         layout.addWidget(self.table)
 
         self.media_player = QMediaPlayer(self)
@@ -134,6 +152,63 @@ class NoiseCancellationBrowser(QWidget):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_slider)
+
+    def handle_selection_change(self):
+        selected_indexes = self.table.selectedIndexes()
+        if not selected_indexes:
+            self.play_button.setEnabled(False)
+            self.play_toggle.setEnabled(False)
+            self.slider.setEnabled(False)
+            return
+        row = selected_indexes[0].row()
+        file_checkbox = self.table.cellWidget(row, 0)
+        if file_checkbox:
+            file_path = file_checkbox.property("file_path")
+            mime, _ = mimetypes.guess_type(file_path)
+            if mime and (mime.startswith("audio") or mime.startswith("video")):
+                self.selected_audio = file_path
+                self.play_button.setEnabled(True)
+                self.play_toggle.setEnabled(True)
+                self.slider.setEnabled(True)
+                return
+        self.play_button.setEnabled(False)
+        self.play_toggle.setEnabled(False)
+        self.slider.setEnabled(False)
+
+    def play_audio(self):
+        if hasattr(self, "selected_audio") and self.selected_audio:
+            try:
+                self.media_player.setSource(QUrl.fromLocalFile(self.selected_audio))
+                self.media_player.play()
+                self.play_toggle.setText("⏸ Pause")
+                self.slider.setValue(0)
+                self.timer.start(200)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to play media: {e}")
+
+    def toggle_playback(self):
+        if self.media_player.playbackState() == QMediaPlayer.PlayingState:
+            self.media_player.pause()
+            self.play_toggle.setText("▶️ Play")
+        else:
+            self.media_player.play()
+            self.play_toggle.setText("⏸ Pause")
+            self.timer.start(200)
+
+    def update_slider(self):
+        if self.media_player.duration() > 0:
+            pos = self.media_player.position()
+            dur = self.media_player.duration()
+            self.slider.setRange(0, dur)
+            self.slider.setValue(pos)
+            current_time = QTime(0, 0, 0).addMSecs(pos).toString("mm:ss")
+            total_time = QTime(0, 0, 0).addMSecs(dur).toString("mm:ss")
+            self.time_label.setText(f"{current_time} / {total_time}")
+        else:
+            self.slider.setValue(0)
+            self.time_label.setText("00:00 / 00:00")
+        if self.media_player.playbackState() != QMediaPlayer.PlayingState:
+            self.timer.stop()
 
     def import_folder(self, folder=None):
         if not folder:
@@ -221,60 +296,3 @@ class NoiseCancellationBrowser(QWidget):
     def handle_finished(self, count):
         self.progress_bar.setVisible(False)
         QMessageBox.information(self, "Done", f"✅ Noise removed from {count} file(s).")
-
-    def handle_selection_change(self):
-        selected_indexes = self.table.selectedIndexes()
-        if not selected_indexes:
-            self.play_button.setEnabled(False)
-            self.play_toggle.setEnabled(False)
-            self.slider.setEnabled(False)
-            return
-        row = selected_indexes[0].row()
-        file_checkbox = self.table.cellWidget(row, 0)
-        if file_checkbox:
-            file_path = file_checkbox.property("file_path")
-            mime, _ = mimetypes.guess_type(file_path)
-            if mime and mime.startswith("audio"):
-                self.selected_audio = file_path
-                self.play_button.setEnabled(True)
-                self.play_toggle.setEnabled(True)
-                self.slider.setEnabled(True)
-                return
-        self.play_button.setEnabled(False)
-        self.play_toggle.setEnabled(False)
-        self.slider.setEnabled(False)
-
-    def play_audio(self):
-        if hasattr(self, "selected_audio") and self.selected_audio:
-            try:
-                self.media_player.setSource(QUrl.fromLocalFile(self.selected_audio))
-                self.media_player.play()
-                self.play_toggle.setText("⏸ Pause")
-                self.slider.setValue(0)
-                self.timer.start(200)
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to play audio: {e}")
-
-    def toggle_playback(self):
-        if self.media_player.playbackState() == QMediaPlayer.PlayingState:
-            self.media_player.pause()
-            self.play_toggle.setText("▶️ Play")
-        else:
-            self.media_player.play()
-            self.play_toggle.setText("⏸ Pause")
-            self.timer.start(200)
-
-    def update_slider(self):
-        if self.media_player.duration() > 0:
-            pos = self.media_player.position()
-            dur = self.media_player.duration()
-            self.slider.setRange(0, dur)
-            self.slider.setValue(pos)
-            current_time = QTime(0, 0, 0).addMSecs(pos).toString("mm:ss")
-            total_time = QTime(0, 0, 0).addMSecs(dur).toString("mm:ss")
-            self.time_label.setText(f"{current_time} / {total_time}")
-        else:
-            self.slider.setValue(0)
-            self.time_label.setText("00:00 / 00:00")
-        if self.media_player.playbackState() != QMediaPlayer.PlayingState:
-            self.timer.stop()

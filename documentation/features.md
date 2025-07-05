@@ -38,7 +38,7 @@
 
 ### 🎥 Video Format Conversion
 - [ ] Convert between `.mp4`, `.avi`, `.mov`, etc.
-- [ ] Retain or modify metadata during conversion
+- [ ] Retain or modify metadata during conversion 
 
 ### 🔇 Video Editing Utilities
 - [ ] Mute audio (remove audio track)
