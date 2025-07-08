@@ -161,6 +161,43 @@ class ImageEditorBrowser(QWidget):
                     painter.setPen(pen)
                     painter.drawRect(QRect(self.start, self.end))
 
+            def get_mapped_crop_rect(self):
+                if not self.crop_rect:
+                    return None
+
+                displayed_pixmap = self.pixmap()
+                if displayed_pixmap is None:
+                    return None
+
+                # Dimensions
+                label_width = self.width()
+                label_height = self.height()
+                pixmap_width = displayed_pixmap.width()
+                pixmap_height = displayed_pixmap.height()
+
+                # Offset if pixmap is centered in label
+                offset_x = max(0, (label_width - pixmap_width) // 2)
+                offset_y = max(0, (label_height - pixmap_height) // 2)
+
+                # Adjust crop rect relative to pixmap position
+                adjusted = QRect(
+                    self.crop_rect.x() - offset_x,
+                    self.crop_rect.y() - offset_y,
+                    self.crop_rect.width(),
+                    self.crop_rect.height()
+                )
+
+                # Scale to original pixmap dimensions
+                ratio_x = self.original_pixmap.width() / pixmap_width
+                ratio_y = self.original_pixmap.height() / pixmap_height
+
+                return QRect(
+                    int(adjusted.x() * ratio_x),
+                    int(adjusted.y() * ratio_y),
+                    int(adjusted.width() * ratio_x),
+                    int(adjusted.height() * ratio_y)
+                ).normalized()
+
         pixmap = QPixmap(file_path)
 
         image_label = CropLabel(pixmap)
@@ -183,40 +220,36 @@ class ImageEditorBrowser(QWidget):
         zoom_slider.valueChanged.connect(update_image)
         update_image(zoom_slider.value())
 
+
+
         def crop_image():
-            if not image_label.crop_rect:
+            mapped_rect = image_label.get_mapped_crop_rect()
+            if not mapped_rect or mapped_rect.width() <= 0 or mapped_rect.height() <= 0:
+                QMessageBox.warning(dialog, "Invalid Crop", "Calculated crop area is empty.")
                 return
 
-            scaled_pixmap = image_label.pixmap()
-            if scaled_pixmap is None:
-                return
+            # Crop from original pixmap
+            cropped = pixmap.copy(mapped_rect)
 
-            rect = image_label.crop_rect
-
-            ratio_x = pixmap.width() / image_label.width()
-            ratio_y = pixmap.height() / image_label.height()
-
-            x = int(rect.x() * ratio_x)
-            y = int(rect.y() * ratio_y)
-            w = int(rect.width() * ratio_x)
-            h = int(rect.height() * ratio_y)
-
-            if w <= 0 or h <= 0:
-                return
-
-            # Crop and update UI
-            cropped = pixmap.copy(x, y, w, h)
+            # Update label and UI
             image_label.original_pixmap = cropped
             image_label.setPixmap(cropped)
             image_label.crop_rect = None
             update_image(zoom_slider.value())
 
-            # Auto-save the cropped image to the original file path with suffix
+            # Save cropped image
             base, ext = os.path.splitext(file_path)
-            cropped_path = f"{base}_cropped{ext}"
-            cropped.save(cropped_path)
+            cropped_path = f"{base}_cropped.png"  # force PNG to test
 
-            QMessageBox.information(dialog, "Image Saved", f"Cropped image saved to:\n{cropped_path}")
+            print("Saving cropped image to:", cropped_path)
+            print("Cropped size:", cropped.size())
+            print("IsNull:", cropped.isNull())
+
+            success = cropped.save(cropped_path, "PNG")  # try forcing format
+            if success:
+                QMessageBox.information(dialog, "Image Saved", f"Cropped image saved to:\n{cropped_path}")
+            else:
+                QMessageBox.critical(dialog, "Save Failed", f"Could not save image to:\n{cropped_path}")
 
 
             # print(f"Crop rect: {rect.x()}, {rect.y()}, {rect.width()}, {rect.height()}")
