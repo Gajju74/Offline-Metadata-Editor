@@ -1,4 +1,3 @@
-# ui/conversion_viewer.py
 import os
 import datetime
 import subprocess
@@ -12,9 +11,13 @@ from PySide6.QtCore import Qt
 SUPPORTED_IMAGE_FORMATS = [".jpg", ".jpeg", ".png", ".heic"]
 SUPPORTED_VIDEO_FORMATS = [".mp4", ".mov", ".avi", ".mkv"]
 
-def convert_image(input_path, output_format="jpg", strip_metadata=False):
+def convert_image(input_path, output_format="jpg", strip_metadata=False, output_dir=None):
     try:
-        output_path = os.path.abspath(os.path.splitext(input_path)[0] + f"_converted.{output_format}")
+        output_dir = output_dir or os.path.dirname(input_path)
+        os.makedirs(output_dir, exist_ok=True)
+        filename = os.path.splitext(os.path.basename(input_path))[0]
+        output_path = os.path.join(output_dir, f"{filename}_converted.{output_format}")
+
         with Image.open(input_path) as img:
             if img.mode in ("RGBA", "LA"):
                 img = img.convert("RGB")
@@ -31,11 +34,14 @@ def convert_image(input_path, output_format="jpg", strip_metadata=False):
     except Exception as e:
         return f"Image conversion error: {e}"
 
-def convert_video(input_path, output_format="mp4", strip_metadata=False, custom_metadata=None):
+def convert_video(input_path, output_format="mp4", strip_metadata=False, custom_metadata=None, output_dir=None):
     try:
-        output_path = os.path.abspath(os.path.splitext(input_path)[0] + f"_converted.{output_format}")
-        cmd = ["ffmpeg", "-y", "-i", input_path]
+        output_dir = output_dir or os.path.dirname(input_path)
+        os.makedirs(output_dir, exist_ok=True)
+        filename = os.path.splitext(os.path.basename(input_path))[0]
+        output_path = os.path.join(output_dir, f"{filename}_converted.{output_format}")
 
+        cmd = ["ffmpeg", "-y", "-i", input_path]
         if strip_metadata:
             cmd += ["-map_metadata", "-1"]
         elif custom_metadata:
@@ -44,13 +50,14 @@ def convert_video(input_path, output_format="mp4", strip_metadata=False, custom_
 
         cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", output_path]
         subprocess.run(cmd, check=True)
+
         return output_path if os.path.exists(output_path) else None
     except subprocess.CalledProcessError as e:
         return f"FFmpeg error: {e}"
     except Exception as e:
         return f"Video conversion error: {e}"
 
-def batch_convert_folder(folder_path, output_format):
+def batch_convert_folder(folder_path, output_format, output_dir=None):
     results = []
     output_ext = f".{output_format.lower()}"
 
@@ -64,14 +71,13 @@ def batch_convert_folder(folder_path, output_format):
             continue
 
         if ext.lower() in SUPPORTED_IMAGE_FORMATS:
-            result = convert_image(full_path, output_format)
+            result = convert_image(full_path, output_format, output_dir=output_dir)
         else:
-            result = convert_video(full_path, output_format)
+            result = convert_video(full_path, output_format, output_dir=output_dir)
 
         if isinstance(result, str) and result.endswith(output_ext):
             results.append({"result": result})
         else:
-            print(f"❌ Failed conversion for: {filename} -> {result}")
             results.append({"error": result})
 
     return results
@@ -99,9 +105,6 @@ class ConversionBrowser(QWidget):
         """)
         layout.addWidget(heading)
 
-
-
-        # --- Top Bar ---
         top_bar = QHBoxLayout()
         if self.go_back_callback:
             back_btn = QPushButton("← Back")
@@ -134,7 +137,6 @@ class ConversionBrowser(QWidget):
         top_bar.addStretch()
         layout.addLayout(top_bar)
 
-        # Table
         self.table = QTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["File Name", "File Type", "Size (MB)", "Date Modified", "Action"])
@@ -143,14 +145,6 @@ class ConversionBrowser(QWidget):
 
         self.folder_path = None
         self.converted_file_paths = []
-
-    def refresh_folder(self):
-        self.table.setRowCount(0)
-        self.converted_file_paths = []
-        self.folder_path = None
-        self.format_dropdown.setCurrentIndex(0)
-        QMessageBox.information(self, "Reset", "View has been cleared.")
-
 
     def import_folder(self):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -181,8 +175,6 @@ class ConversionBrowser(QWidget):
                 self.table.setItem(row, 2, QTableWidgetItem(file_size))
                 self.table.setItem(row, 3, QTableWidgetItem(modified))
                 self.table.setItem(row, 4, QTableWidgetItem("Pending"))
-
-            # QMessageBox.information(self, "Folder Selected", f"Imported: {folder_path}")
 
     def run_bulk_conversion(self):
         if not self.folder_path:
@@ -221,9 +213,7 @@ class ConversionBrowser(QWidget):
                     download_btn = QPushButton("Download")
                     download_btn.clicked.connect(lambda _, path=file_path: os.startfile(path))
                     self.table.setCellWidget(row, 4, download_btn)
-
                     row += 1
-
             elif "error" in result:
                 print(f"❌ Conversion error: {result['error']}")
 
